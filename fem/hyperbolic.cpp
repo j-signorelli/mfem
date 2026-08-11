@@ -19,12 +19,13 @@ namespace mfem
 {
 
 HyperbolicFormIntegrator::HyperbolicFormIntegrator(
+   const FluxFunction &fluxFunction,
    const NumericalFlux &numFlux,
    const int IntOrderOffset,
    real_t sign)
    : NonlinearFormIntegrator(),
      numFlux(numFlux),
-     fluxFunction(numFlux.GetFluxFunction()),
+     fluxFunction(fluxFunction),
      IntOrderOffset(IntOrderOffset),
      sign(sign),
      num_equations(fluxFunction.num_equations)
@@ -424,20 +425,16 @@ BdrHyperbolicDirichletIntegrator::BdrHyperbolicDirichletIntegrator(
    real_t sign)
    : NonlinearFormIntegrator(),
      numFlux(numFlux),
-     fluxFunction(numFlux.GetFluxFunction()),
      u_vcoeff(bdrState),
      IntOrderOffset(IntOrderOffset),
      sign(sign),
-     num_equations(fluxFunction.num_equations)
+     num_equations(bdrState.GetVDim())
 {
-   MFEM_VERIFY(fluxFunction.num_equations == bdrState.GetVDim(),
-               "Flux function does not match the vector dimension of the coefficient!");
 #ifndef MFEM_THREAD_SAFE
    state_in.SetSize(num_equations);
    state_out.SetSize(num_equations);
    fluxN.SetSize(num_equations);
    JDotN.SetSize(num_equations);
-   nor.SetSize(fluxFunction.dim);
 #endif
    ResetMaxCharSpeed();
 }
@@ -467,6 +464,7 @@ void BdrHyperbolicDirichletIntegrator::AssembleFaceVector(
    Vector fluxN(num_equations);
 #else
    shape.SetSize(dof);
+   nor.SetSize(Tr.GetSpaceDim());
 #endif
 
    elvect.SetSize(dof * num_equations);
@@ -544,6 +542,7 @@ void BdrHyperbolicDirichletIntegrator::AssembleFaceGrad(
    DenseMatrix JDotN(num_equations);
 #else
    shape.SetSize(dof);
+   nor.SetSize(Tr.GetSpaceDim());
 #endif
 
    elmat.SetSize(dof * num_equations);
@@ -588,8 +587,8 @@ void BdrHyperbolicDirichletIntegrator::AssembleFaceGrad(
       // Compute hat(J) using evaluated quantities
       numFlux.Grad(1, state_in, state_out, nor, Tr, JDotN);
 
-      for (int di = 0; di < fluxFunction.num_equations; di++)
-         for (int dj = 0; dj < fluxFunction.num_equations; dj++)
+      for (int di = 0; di < num_equations; di++)
+         for (int dj = 0; dj < num_equations; dj++)
          {
             // pre-multiply integration weight to Jacobian
             const real_t w = -ip.weight * sign * JDotN(di,dj);

@@ -314,7 +314,7 @@ MFEM_DEPRECATED typedef NumericalFlux RiemannSolver;
 class HyperbolicFormIntegrator : public NonlinearFormIntegrator
 {
 private:
-   const NumericalFlux &numFlux;   // Numerical flux that maps F(u±,x) to F̂
+   const NumericalFlux &numFlux;
    const FluxFunction &fluxFunction;
    const int IntOrderOffset; // integration order offset, 2*p + IntOrderOffset.
    const real_t sign;
@@ -345,14 +345,34 @@ public:
    /**
     * @brief Construct a new HyperbolicFormIntegrator object
     *
+    * @param[in] fluxFunction flux function
     * @param[in] numFlux numerical flux
     * @param[in] IntOrderOffset integration order offset
     * @param[in] sign sign of the convection term
     */
    HyperbolicFormIntegrator(
+      const FluxFunction &fluxFunction,
       const NumericalFlux &numFlux,
       const int IntOrderOffset = 0,
       const real_t sign = 1.);
+
+   /**
+    * @deprecated Please use provide the \ref FluxFunction and
+    * \ref NumericalFlux separately in HyperbolicFormIntegrator().
+    * 
+    * @brief Construct a new HyperbolicFormIntegrator object
+    *
+    * @param[in] numFlux numerical flux
+    * @param[in] IntOrderOffset integration order offset
+    * @param[in] sign sign of the convection term
+    */
+   MFEM_DEPRECATED 
+   HyperbolicFormIntegrator(
+      const NumericalFlux &numFlux,
+      const int IntOrderOffset = 0,
+      const real_t sign = 1.)
+   : HyperbolicFormIntegrator(numFlux.GetFluxFunction(), numFlux, 
+                              IntOrderOffset, sign) {}
 
    /// Reset the maximum characteristic speed to zero
    void ResetMaxCharSpeed() { max_char_speed = 0.0; }
@@ -434,8 +454,7 @@ public:
 class BdrHyperbolicDirichletIntegrator : public NonlinearFormIntegrator
 {
 private:
-   const NumericalFlux &numFlux;    // Numerical flux that maps F to F̂
-   const FluxFunction &fluxFunction;
+   const NumericalFlux &numFlux;    // Numerical flux
    VectorCoefficient &u_vcoeff;     // Boundary state vector coefficient
    const int IntOrderOffset; // integration order offset, 2*p + IntOrderOffset.
    const real_t sign;
@@ -476,8 +495,12 @@ public:
    /// Get the maximum characteristic speed
    real_t GetMaxCharSpeed() const { return max_char_speed; }
 
-   /// Get the associated flux function
-   const FluxFunction &GetFluxFunction() const { return fluxFunction; }
+   /**
+    * @deprecated \ref NumericalFlux no longer requires a \ref FluxFunction,
+    * and so calling this may result in a de-referenced nullptr.
+    */
+   MFEM_DEPRECATED const FluxFunction &GetFluxFunction() const 
+   { return numFlux.GetFluxFunction(); }
 
    /**
     * @brief Implements <-F̂(u⁻,u_b,x) n, [v]> with abstract F̂ computed by
