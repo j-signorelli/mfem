@@ -752,7 +752,7 @@ void FluxFunction::ComputeFluxJacobianDotN(const Vector &U,
 }
 
 RusanovFlux::RusanovFlux(const FluxFunction &fluxFunction)
-   : NumericalFlux(fluxFunction)
+: fluxFxn(fluxFunction)
 {
 #ifndef MFEM_THREAD_SAFE
    fluxN1.SetSize(fluxFunction.num_equations);
@@ -765,15 +765,15 @@ real_t RusanovFlux::Eval(const Vector &state1, const Vector &state2,
                          Vector &flux) const
 {
 #ifdef MFEM_THREAD_SAFE
-   Vector fluxN1(fluxFunction.num_equations), fluxN2(fluxFunction.num_equations);
+   Vector fluxN1(fluxFxn.num_equations), fluxN2(fluxFxn.num_equations);
 #endif
-   const real_t speed1 = fluxFunction.ComputeFluxDotN(state1, nor, Tr, fluxN1);
-   const real_t speed2 = fluxFunction.ComputeFluxDotN(state2, nor, Tr, fluxN2);
+   const real_t speed1 = fluxFxn.ComputeFluxDotN(state1, nor, Tr, fluxN1);
+   const real_t speed2 = fluxFxn.ComputeFluxDotN(state2, nor, Tr, fluxN2);
    // NOTE: nor in general is not a unit normal
    const real_t maxE = std::max(speed1, speed2);
    // here, nor.Norml2() is multiplied to match the scale with fluxN
    const real_t scaledMaxE = maxE * nor.Norml2();
-   for (int i = 0; i < fluxFunction.num_equations; i++)
+   for (int i = 0; i < fluxFxn.num_equations; i++)
    {
       flux(i) = 0.5*(scaledMaxE*(state1(i) - state2(i)) + (fluxN1(i) + fluxN2(i)));
    }
@@ -785,11 +785,11 @@ void RusanovFlux::Grad(int side, const Vector &state1, const Vector &state2,
                        DenseMatrix &grad) const
 {
 #ifdef MFEM_THREAD_SAFE
-   Vector fluxN1(fluxFunction.num_equations), fluxN2(fluxFunction.num_equations);
+   Vector fluxN1(fluxFxn.num_equations), fluxN2(fluxFxn.num_equations);
 #endif
 
-   const real_t speed1 = fluxFunction.ComputeFluxDotN(state1, nor, Tr, fluxN1);
-   const real_t speed2 = fluxFunction.ComputeFluxDotN(state2, nor, Tr, fluxN2);
+   const real_t speed1 = fluxFxn.ComputeFluxDotN(state1, nor, Tr, fluxN1);
+   const real_t speed2 = fluxFxn.ComputeFluxDotN(state2, nor, Tr, fluxN2);
 
    // NOTE: nor in general is not a unit normal
    const real_t maxE = std::max(speed1, speed2);
@@ -798,18 +798,18 @@ void RusanovFlux::Grad(int side, const Vector &state1, const Vector &state2,
 
    if (side == 1)
    {
-      fluxFunction.ComputeFluxJacobianDotN(state1, nor, Tr, grad);
+      fluxFxn.ComputeFluxJacobianDotN(state1, nor, Tr, grad);
 
-      for (int i = 0; i < fluxFunction.num_equations; i++)
+      for (int i = 0; i < fluxFxn.num_equations; i++)
       {
          grad(i,i) += 0.5 * scaledMaxE;
       }
    }
    else
    {
-      fluxFunction.ComputeFluxJacobianDotN(state2, nor, Tr, grad);
+      fluxFxn.ComputeFluxJacobianDotN(state2, nor, Tr, grad);
 
-      for (int i = 0; i < fluxFunction.num_equations; i++)
+      for (int i = 0; i < fluxFxn.num_equations; i++)
       {
          grad(i,i) -= 0.5 * scaledMaxE;
       }
@@ -821,16 +821,16 @@ real_t RusanovFlux::Average(const Vector &state1, const Vector &state2,
                             Vector &flux) const
 {
 #ifdef MFEM_THREAD_SAFE
-   Vector fluxN1(fluxFunction.num_equations), fluxN2(fluxFunction.num_equations);
+   Vector fluxN1(fluxFxn.num_equations), fluxN2(fluxFxn.num_equations);
 #endif
-   const real_t speed1 = fluxFunction.ComputeFluxDotN(state1, nor, Tr, fluxN1);
-   const real_t speed2 = fluxFunction.ComputeAvgFluxDotN(state1, state2, nor, Tr,
+   const real_t speed1 = fluxFxn.ComputeFluxDotN(state1, nor, Tr, fluxN1);
+   const real_t speed2 = fluxFxn.ComputeAvgFluxDotN(state1, state2, nor, Tr,
                                                          fluxN2);
    // NOTE: nor in general is not a unit normal
    const real_t maxE = std::max(speed1, speed2);
    // here, nor.Norml2() is multiplied to match the scale with fluxN
    const real_t scaledMaxE = maxE * nor.Norml2() * 0.5;
-   for (int i = 0; i < fluxFunction.num_equations; i++)
+   for (int i = 0; i < fluxFxn.num_equations; i++)
    {
       flux(i) = 0.5*(scaledMaxE*(state1(i) - state2(i)) + (fluxN1(i) + fluxN2(i)));
    }
@@ -843,7 +843,7 @@ void RusanovFlux::AverageGrad(int side, const Vector &state1,
                               DenseMatrix &grad) const
 {
 #ifdef MFEM_THREAD_SAFE
-   Vector fluxN1(fluxFunction.num_equations), fluxN2(fluxFunction.num_equations);
+   Vector fluxN1(fluxFxn.num_equations), fluxN2(fluxFxn.num_equations);
 #endif
 
 #if defined(MFEM_USE_DOUBLE)
@@ -860,14 +860,14 @@ void RusanovFlux::AverageGrad(int side, const Vector &state1,
    if (side == 1)
    {
 #ifdef MFEM_THREAD_SAFE
-      DenseMatrix JDotN(fluxFunction.num_equations);
+      DenseMatrix JDotN(fluxFxn.num_equations);
 #else
-      JDotN.SetSize(fluxFunction.num_equations);
+      JDotN.SetSize(fluxFxn.num_equations);
 #endif
-      const real_t speed1 = fluxFunction.ComputeFluxDotN(state1, nor, Tr, fluxN1);
-      const real_t speed2 = fluxFunction.ComputeAvgFluxDotN(state1, state2, nor, Tr,
+      const real_t speed1 = fluxFxn.ComputeFluxDotN(state1, nor, Tr, fluxN1);
+      const real_t speed2 = fluxFxn.ComputeAvgFluxDotN(state1, state2, nor, Tr,
                                                             fluxN2);
-      fluxFunction.ComputeFluxJacobianDotN(state1, nor, Tr, JDotN);
+      fluxFxn.ComputeFluxJacobianDotN(state1, nor, Tr, JDotN);
 
       // NOTE: nor in general is not a unit normal
       const real_t maxE = std::max(speed1, speed2);
@@ -876,7 +876,7 @@ void RusanovFlux::AverageGrad(int side, const Vector &state1,
 
       grad = 0.;
 
-      for (int i = 0; i < fluxFunction.num_equations; i++)
+      for (int i = 0; i < fluxFxn.num_equations; i++)
       {
          // Only diagonal terms of J are considered
          // lim_{u → u⁻} (F̄(u⁻,u)n - F(u⁻)n) / (u - u⁻) = ½λ
@@ -887,9 +887,9 @@ void RusanovFlux::AverageGrad(int side, const Vector &state1,
    }
    else
    {
-      const real_t speed1 = fluxFunction.ComputeAvgFluxDotN(state1, state2, nor, Tr,
+      const real_t speed1 = fluxFxn.ComputeAvgFluxDotN(state1, state2, nor, Tr,
                                                             fluxN1);
-      const real_t speed2 = fluxFunction.ComputeFluxDotN(state2, nor, Tr, fluxN2);
+      const real_t speed2 = fluxFxn.ComputeFluxDotN(state2, nor, Tr, fluxN2);
 
       // NOTE: nor in general is not a unit normal
       const real_t maxE = std::max(speed1, speed2);
@@ -898,7 +898,7 @@ void RusanovFlux::AverageGrad(int side, const Vector &state1,
 
       grad = 0.;
 
-      for (int i = 0; i < fluxFunction.num_equations; i++)
+      for (int i = 0; i < fluxFxn.num_equations; i++)
       {
          // lim_{u → u⁻} (F(u)n - F̄(u⁻,u)n) / (u - u⁻) = ½λ
          if (equal_check(state1(i), state2(i))) { continue; }
@@ -910,7 +910,7 @@ void RusanovFlux::AverageGrad(int side, const Vector &state1,
 
 ComponentwiseUpwindFlux::ComponentwiseUpwindFlux(
    const FluxFunction &fluxFunction)
-   : NumericalFlux(fluxFunction)
+   : fluxFxn(fluxFunction)
 {
 #ifndef MFEM_THREAD_SAFE
    fluxN1.SetSize(fluxFunction.num_equations);
@@ -925,12 +925,12 @@ real_t ComponentwiseUpwindFlux::Eval(const Vector &state1, const Vector &state2,
                                      Vector &flux) const
 {
 #ifdef MFEM_THREAD_SAFE
-   Vector fluxN1(fluxFunction.num_equations), fluxN2(fluxFunction.num_equations);
+   Vector fluxN1(fluxFxn.num_equations), fluxN2(fluxFxn.num_equations);
 #endif
-   const real_t speed1 = fluxFunction.ComputeFluxDotN(state1, nor, Tr, fluxN1);
-   const real_t speed2 = fluxFunction.ComputeFluxDotN(state2, nor, Tr, fluxN2);
+   const real_t speed1 = fluxFxn.ComputeFluxDotN(state1, nor, Tr, fluxN1);
+   const real_t speed2 = fluxFxn.ComputeFluxDotN(state2, nor, Tr, fluxN2);
 
-   for (int i = 0; i < fluxFunction.num_equations; i++)
+   for (int i = 0; i < fluxFxn.num_equations; i++)
    {
       if (state1(i) <= state2(i))
       {
@@ -951,18 +951,18 @@ void ComponentwiseUpwindFlux::Grad(int side, const Vector &state1,
                                    DenseMatrix &grad) const
 {
 #ifdef MFEM_THREAD_SAFE
-   DenseMatrix JDotN(fluxFunction.num_equations);
+   DenseMatrix JDotN(fluxFxn.num_equations);
 #else
-   JDotN.SetSize(fluxFunction.num_equations);
+   JDotN.SetSize(fluxFxn.num_equations);
 #endif
 
    grad = 0.;
 
    if (side == 1)
    {
-      fluxFunction.ComputeFluxJacobianDotN(state1, nor, Tr, JDotN);
+      fluxFxn.ComputeFluxJacobianDotN(state1, nor, Tr, JDotN);
 
-      for (int i = 0; i < fluxFunction.num_equations; i++)
+      for (int i = 0; i < fluxFxn.num_equations; i++)
       {
          // Only diagonal terms of J are considered
          grad(i,i) = std::max(JDotN(i,i), 0_r);
@@ -970,9 +970,9 @@ void ComponentwiseUpwindFlux::Grad(int side, const Vector &state1,
    }
    else
    {
-      fluxFunction.ComputeFluxJacobianDotN(state2, nor, Tr, JDotN);
+      fluxFxn.ComputeFluxJacobianDotN(state2, nor, Tr, JDotN);
 
-      for (int i = 0; i < fluxFunction.num_equations; i++)
+      for (int i = 0; i < fluxFxn.num_equations; i++)
       {
          // Only diagonal terms of J are considered
          grad(i,i) = std::min(JDotN(i,i), 0_r);
@@ -986,13 +986,13 @@ real_t ComponentwiseUpwindFlux::Average(const Vector &state1,
                                         Vector &flux) const
 {
 #ifdef MFEM_THREAD_SAFE
-   Vector fluxN1(fluxFunction.num_equations), fluxN2(fluxFunction.num_equations);
+   Vector fluxN1(fluxFxn.num_equations), fluxN2(fluxFxn.num_equations);
 #endif
-   const real_t speed1 = fluxFunction.ComputeFluxDotN(state1, nor, Tr, fluxN1);
-   const real_t speed2 = fluxFunction.ComputeAvgFluxDotN(state1, state2, nor, Tr,
+   const real_t speed1 = fluxFxn.ComputeFluxDotN(state1, nor, Tr, fluxN1);
+   const real_t speed2 = fluxFxn.ComputeAvgFluxDotN(state1, state2, nor, Tr,
                                                          fluxN2);
 
-   for (int i = 0; i < fluxFunction.num_equations; i++)
+   for (int i = 0; i < fluxFxn.num_equations; i++)
    {
       if (state1(i) <= state2(i))
       {
@@ -1013,7 +1013,7 @@ void ComponentwiseUpwindFlux::AverageGrad(int side, const Vector &state1,
                                           DenseMatrix &grad) const
 {
 #ifdef MFEM_THREAD_SAFE
-   Vector fluxN1(fluxFunction.num_equations), fluxN2(fluxFunction.num_equations);
+   Vector fluxN1(fluxFxn.num_equations), fluxN2(fluxFxn.num_equations);
 #endif
 
 #if defined(MFEM_USE_DOUBLE)
@@ -1030,17 +1030,17 @@ void ComponentwiseUpwindFlux::AverageGrad(int side, const Vector &state1,
    if (side == 1)
    {
 #ifdef MFEM_THREAD_SAFE
-      DenseMatrix JDotN(fluxFunction.num_equations);
+      DenseMatrix JDotN(fluxFxn.num_equations);
 #else
-      JDotN.SetSize(fluxFunction.num_equations);
+      JDotN.SetSize(fluxFxn.num_equations);
 #endif
-      fluxFunction.ComputeFluxDotN(state1, nor, Tr, fluxN1);
-      fluxFunction.ComputeAvgFluxDotN(state1, state2, nor, Tr, fluxN2);
-      fluxFunction.ComputeFluxJacobianDotN(state1, nor, Tr, JDotN);
+      fluxFxn.ComputeFluxDotN(state1, nor, Tr, fluxN1);
+      fluxFxn.ComputeAvgFluxDotN(state1, state2, nor, Tr, fluxN2);
+      fluxFxn.ComputeFluxJacobianDotN(state1, nor, Tr, JDotN);
 
       grad = 0.;
 
-      for (int i = 0; i < fluxFunction.num_equations; i++)
+      for (int i = 0; i < fluxFxn.num_equations; i++)
       {
          // Only diagonal terms of J are considered
          // lim_{u → u⁻} (F̄(u⁻,u)n - F(u⁻)n) / (u - u⁻) = ½J(u⁻)n
@@ -1055,12 +1055,12 @@ void ComponentwiseUpwindFlux::AverageGrad(int side, const Vector &state1,
 #ifdef MFEM_THREAD_SAFE
       DenseMatrix JDotN;
 #endif
-      fluxFunction.ComputeAvgFluxDotN(state1, state2, nor, Tr, fluxN1);
-      fluxFunction.ComputeFluxDotN(state2, nor, Tr, fluxN2);
+      fluxFxn.ComputeAvgFluxDotN(state1, state2, nor, Tr, fluxN1);
+      fluxFxn.ComputeFluxDotN(state2, nor, Tr, fluxN2);
 
       // Jacobian is not needed except the limit case when u⁺=u⁻
       bool J_needed = false;
-      for (int i = 0; i < fluxFunction.num_equations; i++)
+      for (int i = 0; i < fluxFxn.num_equations; i++)
          if (equal_check(state1(i), state2(i)))
          {
             J_needed = true;
@@ -1069,13 +1069,13 @@ void ComponentwiseUpwindFlux::AverageGrad(int side, const Vector &state1,
 
       if (J_needed)
       {
-         JDotN.SetSize(fluxFunction.num_equations);
-         fluxFunction.ComputeFluxJacobianDotN(state1, nor, Tr, JDotN);
+         JDotN.SetSize(fluxFxn.num_equations);
+         fluxFxn.ComputeFluxJacobianDotN(state1, nor, Tr, JDotN);
       }
 
       grad = 0.;
 
-      for (int i = 0; i < fluxFunction.num_equations; i++)
+      for (int i = 0; i < fluxFxn.num_equations; i++)
       {
          // Only diagonal terms of J are considered
          // lim_{u → u⁻} (F(u)n - F̄(u⁻,u)n) / (u - u⁻) = ½J(u⁻)n

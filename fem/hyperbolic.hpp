@@ -700,6 +700,7 @@ public:
                     DenseMatrix &grad) const override;
 
 protected:
+   const FluxFunction &fluxFxn;
 #ifndef MFEM_THREAD_SAFE
    mutable Vector fluxN1, fluxN2;
    mutable DenseMatrix JDotN;
@@ -810,6 +811,7 @@ public:
                     DenseMatrix &grad) const override;
 
 protected:
+   const FluxFunction &fluxFxn;
 #ifndef MFEM_THREAD_SAFE
    mutable Vector fluxN1, fluxN2;
    mutable DenseMatrix JDotN;
