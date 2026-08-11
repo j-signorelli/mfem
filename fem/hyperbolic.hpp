@@ -194,7 +194,7 @@ class NumericalFlux
 {
 public:
    /**
-    * @brief Constructor for a flux function
+    * @brief Constructor for a flux function.
     */
    NumericalFlux() : fluxFunction(nullptr) {}
 
@@ -307,9 +307,9 @@ MFEM_DEPRECATED typedef NumericalFlux RiemannSolver;
  * @brief Abstract hyperbolic form integrator, assembling (F(u, x), ∇v) and
  * <F̂(u⁻,u⁺,x) n, [v]> terms for scalar finite elements.
  *
- * This form integrator is coupled with a NumericalFlux that implements the
- * numerical flux F̂ at the faces. The flux F is obtained from the FluxFunction
- * assigned to the aforementioned NumericalFlux.
+ * This form integrator uses a FluxFunction that implements the flux
+ * F(u,x) in the volume and a NumericalFlux that implements the
+ * numerical flux F̂ at the faces.
  */
 class HyperbolicFormIntegrator : public NonlinearFormIntegrator
 {
@@ -445,9 +445,7 @@ public:
  * <F̂(u⁻,u_b,x) n, [v]> term for scalar finite elements at the boundary.
  *
  * This form integrator is coupled with a NumericalFlux that implements the
- * numerical flux F̂ at the boundary faces. The flux F is obtained from the
- * FluxFunction assigned to the aforementioned NumericalFlux with the given
- * boundary coefficient for the state u_b.
+ * numerical flux F̂ at the boundary faces.
  *
  * Note the class can be used for imposing conditions on interior interfaces.
  */
