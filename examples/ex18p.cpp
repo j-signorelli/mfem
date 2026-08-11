@@ -204,7 +204,7 @@ int main(int argc, char *argv[])
    RusanovFlux numericalFlux(flux);
    DGHyperbolicConservationLaws euler(
       vfes, std::unique_ptr<HyperbolicFormIntegrator>(
-         new HyperbolicFormIntegrator(numericalFlux, IntOrderOffset)),
+         new HyperbolicFormIntegrator(flux, numericalFlux, IntOrderOffset)),
       preassembleWeakDiv);
 
    // 7. Visualize momentum with its magnitude
