@@ -195,10 +195,12 @@ class NumericalFlux
 public:
    /**
     * @brief Constructor for a flux function
-    * @param fluxFunction flux function F(u,x)
     */
-   NumericalFlux(const FluxFunction &fluxFunction)
-      : fluxFunction(fluxFunction) { }
+   NumericalFlux() : fluxFunction(nullptr) {}
+
+   /// @deprecated Requiring a \ref FluxFunction is now deprecated.
+   MFEM_DEPRECATED NumericalFlux(const FluxFunction &fluxFunction)
+      : fluxFunction(&fluxFunction) { }
 
    /**
     * @brief Evaluates normal numerical flux for the given states and normal.
@@ -284,12 +286,18 @@ public:
 
    virtual ~NumericalFlux() = default;
 
-   /// @brief Get flux function F
-   /// @return constant reference to the flux function.
-   const FluxFunction &GetFluxFunction() const { return fluxFunction; }
+   /**
+    * @deprecated Requiring a \ref FluxFunction to be associated with this
+    * class is now deprecated.
+    * 
+    * @warning Using this function without providing a \ref FluxFunction at
+    * construction will dereference a nullptr!
+    */
+   MFEM_DEPRECATED const FluxFunction &GetFluxFunction() const
+   { return *fluxFunction; }
 
 protected:
-   const FluxFunction &fluxFunction;
+   const FluxFunction *fluxFunction;
 };
 
 /// @deprecated Use NumericalFlux instead.
